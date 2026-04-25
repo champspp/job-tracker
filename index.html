@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #2b6cb0;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #3182ce; color: white; }
+    .btn-success { background: #38a169; color: white; }
+    .btn-danger { background: #e53e3e; color: white; }
+    .btn-light { background: white; color: #2b6cb0; }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+    .toolbar {
+      padding: 14px 16px;
+      background: white;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .toolbar input[type="date"],
+    .toolbar input[type="text"] {
+      padding: 7px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .toolbar input:focus { border-color: #3182ce; }
+
+    .toolbar label { font-size: 0.85rem; color: #718096; }
+
+    .container { padding: 16px; max-width: 1000px; margin: 0 auto; }
+
+    /* Cards (mobile default) */
+    .job-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .job-card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .job-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .job-card-name { font-weight: 700; font-size: 1rem; }
+    .job-card-customer { font-size: 0.85rem; color: #718096; }
+    .job-card-date { font-size: 0.8rem; color: #a0aec0; }
+
+    .job-card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .job-price { font-weight: 700; color: #2b6cb0; font-size: 1rem; }
+
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s;
+    }
+    .badge:hover { opacity: 0.8; }
+    .badge-billed-yes { background: #c6f6d5; color: #276749; }
+    .badge-billed-no  { background: #fed7d7; color: #9b2c2c; }
+    .badge-paid-yes   { background: #bee3f8; color: #2c5282; }
+    .badge-paid-no    { background: #feebc8; color: #7b341e; }
+
+    .job-actions { display: flex; gap: 6px; }
+
+    /* Desktop table */
+    @media (min-width: 700px) {
+      .job-list { display: none; }
+      .table-wrap { display: block; }
+    }
+    @media (max-width: 699px) {
+      .table-wrap { display: none; }
+    }
+
+    .table-wrap {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow-x: auto;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #ebf8ff; }
+    th { padding: 12px 14px; text-align: left; font-size: 0.85rem; color: #2c5282; font-weight: 700; }
+    td { padding: 11px 14px; font-size: 0.9rem; border-top: 1px solid #e2e8f0; }
+    tr:hover td { background: #f7fafc; }
+
+    .toggle-btn {
+      border: none;
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .toggle-btn:hover { opacity: 0.8; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; color: #2b6cb0; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: #3182ce; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    .checkbox-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* Detail view */
+    .detail-row { margin-bottom: 12px; }
+    .detail-label { font-size: 0.8rem; color: #718096; font-weight: 600; margin-bottom: 2px; }
+    .detail-value { font-size: 0.95rem; color: #2d3748; }
+    .detail-box {
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #a0aec0;
+      font-size: 0.95rem;
+    }
+
+    .loading { text-align: center; padding: 30px; color: #718096; font-size: 0.95rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2d3748;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 99px;
+      font-size: 0.9rem;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Job Tracker</h1>
+  <button class="btn btn-light" onclick="openAddModal()">+ เพิ่มงาน</button>
+</header>
+
+<div class="toolbar">
+  <label>วันที่:</label>
+  <input type="date" id="filterDate" onchange="renderAll()" />
+  <input type="text" id="filterText" placeholder="ค้นหาลูกค้า / งาน..." oninput="renderAll()" style="flex:1; min-width:140px;" />
+  <button class="btn btn-sm" style="background:#e2e8f0;color:#4a5568;" onclick="clearFilter()">ล้างตัวกรอง</button>
+</div>
+
+<div class="container">
+  <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+
+  <!-- Mobile cards -->
+  <div class="job-list" id="cardList"></div>
+
+  <!-- Desktop table -->
+  <div class="table-wrap" id="tableWrap" style="display:none;">
+    <table>
+      <thead>
+        <tr>
+          <th>วันที่</th>
+          <th>ลูกค้า</th>
+          <th>ชื่องาน</th>
+          <th>ราคา</th>
+          <th>เปิดบิล</th>
+          <th>เก็บเงิน</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="emptyState" class="empty-state" style="display:none;">ไม่พบรายการงานค่ะ</div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <h2 id="formTitle">เพิ่มงานใหม่</h2>
+    <input type="hidden" id="editRowIndex" />
+
+    <div class="form-group">
+      <label>วันที่</label>
+      <input type="date" id="f_date" />
+    </div>
+    <div class="form-group">
+      <label>ชื่อลูกค้า</label>
+      <input type="text" id="f_customer" placeholder="ชื่อลูกค้า" />
+    </div>
+    <div class="form-group">
+      <label>ชื่องาน</label>
+      <input type="text" id="f_job_name" placeholder="ชื่องาน" />
+    </div>
+    <div class="form-group">
+      <label>รายละเอียดงาน</label>
+      <textarea id="f_details" placeholder="รายละเอียดงาน..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>ราคา (บาท)</label>
+      <input type="number" id="f_price" placeholder="0" />
+    </div>
+    <div class="form-group">
+      <label>หมายเหตุ</label>
+      <textarea id="f_notes" placeholder="หมายเหตุเพิ่มเติม..." style="min-height:60px;"></textarea>
+    </div>
+    <div class="form-group">
+      <div class="checkbox-row">
+        <label><input type="checkbox" id="f_billed" /> เปิดบิลแล้ว</label>
+        <label><input type="checkbox" id="f_paid" /> เก็บเงินแล้ว</label>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" style="background:#e2e8f0;color:#4a5568;" onclick="closeModal('formModal')">ยกเลิก</button>
+      <button class="btn btn-success" onclick="saveJob()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <h2>รายละเอียดงาน</h2>
+    <div id="detailContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" id="detailDeleteBtn">🗑 ลบ</button>
+      <button class="btn btn-primary btn-sm" id="detailEditBtn">✏️ แก้ไข</button>
+      <button class="btn" style="background:#e2e8f0;color:#4a5568;" onclick="closeModal('detailModal')">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'https://script.google.com/macros/s/AKfycbxjuaxPwjPRY5eGrdIlJONTG4HZDtM_9B15ZFGaGoOK1e0pJNzDoONFuTqZNvhfyLR7/exec';
+  let allJobs = [];
+
+  // ---- Init ----
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('filterDate').value = today;
+    loadJobs();
+  });
+
+  // ---- API ----
+  async function loadJobs() {
+    showLoading(true);
+    try {
+      const res = await fetch(API + '?action=getAll');
+      const json = await res.json();
+      allJobs = json.data || [];
+      renderAll();
+    } catch(e) {
+      showToast('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่ค่ะ');
+    }
+    showLoading(false);
+  }
+
+  async function apiPost(payload) {
+    await fetch(API, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    return { success: true };
+  }
+
+  // ---- Render ----
+  function getFiltered() {
+    const date = document.getElementById('filterDate').value;
+    const text = document.getElementById('filterText').value.toLowerCase();
+    return allJobs.filter(j => {
+      const matchDate = !date || String(j.date) === date;
+      const matchText = !text ||
+        String(j.customer).toLowerCase().includes(text) ||
+        String(j.job_name).toLowerCase().includes(text);
+      return matchDate && matchText;
+    });
+  }
+
+  function renderAll() {
+    const jobs = getFiltered();
+    const isMobile = window.innerWidth < 700;
+
+    document.getElementById('emptyState').style.display = jobs.length === 0 ? 'block' : 'none';
+
+    // Cards
+    const cardList = document.getElementById('cardList');
+    cardList.innerHTML = '';
+    jobs.forEach(j => cardList.appendChild(makeCard(j)));
+
+    // Table
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    jobs.forEach(j => tbody.appendChild(makeRow(j)));
+
+    // Show correct view
+    document.getElementById('tableWrap').style.display = (jobs.length > 0 && !isMobile) ? 'block' : 'none';
+  }
+
+  window.addEventListener('resize', renderAll);
+
+  function formatDate(d) {
+    if (!d) return '-';
+    const parts = String(d).split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  }
+
+  function formatPrice(p) {
+    if (!p && p !== 0) return '-';
+    return Number(p).toLocaleString('th-TH') + ' ฿';
+  }
+
+  function billedClass(v) { return v === true || v === 'TRUE' || v === 'true' ? 'badge-billed-yes' : 'badge-billed-no'; }
+  function paidClass(v)   { return v === true || v === 'TRUE' || v === 'true' ? 'badge-paid-yes'   : 'badge-paid-no';   }
+  function isTrue(v) { return v === true || v === 'TRUE' || v === 'true'; }
+
+  function makeCard(j) {
+    const div = document.createElement('div');
+    div.className = 'job-card';
+    div.innerHTML = `
+      <div class="job-card-top">
+        <div>
+          <div class="job-card-name">${esc(j.job_name) || '-'}</div>
+          <div class="job-card-customer">${esc(j.customer) || '-'}</div>
+        </div>
+        <div class="job-card-date">${formatDate(j.date)}</div>
+      </div>
+      <div class="job-card-bottom">
+        <div class="job-price">${formatPrice(j.price)}</div>
+        <div class="badges">
+          <button class="badge ${billedClass(j.billed)}" onclick="toggleField(${j.rowIndex},'billed',${!isTrue(j.billed)})">${isTrue(j.billed) ? '✅ เปิดบิลแล้ว' : '❌ ยังไม่เปิดบิล'}</button>
+          <button class="badge ${paidClass(j.paid)}" onclick="toggleField(${j.rowIndex},'paid',${!isTrue(j.paid)})">${isTrue(j.paid) ? '✅ เก็บเงินแล้ว' : '⏳ ยังไม่เก็บเงิน'}</button>
+        </div>
+        <div class="job-actions">
+          <button class="btn btn-sm btn-primary" onclick="openDetail(${j.rowIndex})">ดูรายละเอียด</button>
+        </div>
+      </div>
+    `;
+    return div;
+  }
+
+  function makeRow(j) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatDate(j.date)}</td>
+      <td>${esc(j.customer) || '-'}</td>
+      <td>${esc(j.job_name) || '-'}</td>
+      <td>${formatPrice(j.price)}</td>
+      <td><button class="toggle-btn ${billedClass(j.billed)}" onclick="toggleField(${j.rowIndex},'billed',${!isTrue(j.billed)})">${isTrue(j.billed) ? '✅ แล้ว' : '❌ ยังไม่'}</button></td>
+      <td><button class="toggle-btn ${paidClass(j.paid)}" onclick="toggleField(${j.rowIndex},'paid',${!isTrue(j.paid)})">${isTrue(j.paid) ? '✅ แล้ว' : '⏳ ยังไม่'}</button></td>
+      <td><button class="btn btn-sm btn-primary" onclick="openDetail(${j.rowIndex})">รายละเอียด</button></td>
+    `;
+    return tr;
+  }
+
+  // ---- Toggle billed/paid ----
+  async function toggleField(rowIndex, field, newVal) {
+    const job = allJobs.find(j => j.rowIndex === rowIndex);
+    if (!job) return;
+    job[field] = newVal;
+    renderAll();
+    try {
+      await apiPost({ action: 'update', ...job });
+      showToast('อัปเดตเรียบร้อยค่ะ ✅');
+    } catch(e) {
+      showToast('อัปเดตไม่สำเร็จค่ะ');
+    }
+  }
+
+  // ---- Add/Edit ----
+  function openAddModal() {
+    document.getElementById('formTitle').textContent = 'เพิ่มงานใหม่';
+    document.getElementById('editRowIndex').value = '';
+    document.getElementById('f_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('f_customer').value = '';
+    document.getElementById('f_job_name').value = '';
+    document.getElementById('f_details').value = '';
+    document.getElementById('f_price').value = '';
+    document.getElementById('f_notes').value = '';
+    document.getElementById('f_billed').checked = false;
+    document.getElementById('f_paid').checked = false;
+    openModal('formModal');
+  }
+
+  function openEditModal(rowIndex) {
+    const job = allJobs.find(j => j.rowIndex === rowIndex);
+    if (!job) return;
+    closeModal('detailModal');
+    document.getElementById('formTitle').textContent = 'แก้ไขงาน';
+    document.getElementById('editRowIndex').value = rowIndex;
+    document.getElementById('f_date').value = job.date || '';
+    document.getElementById('f_customer').value = job.customer || '';
+    document.getElementById('f_job_name').value = job.job_name || '';
+    document.getElementById('f_details').value = job.details || '';
+    document.getElementById('f_price').value = job.price || '';
+    document.getElementById('f_notes').value = job.notes || '';
+    document.getElementById('f_billed').checked = isTrue(job.billed);
+    document.getElementById('f_paid').checked = isTrue(job.paid);
+    openModal('formModal');
+  }
+
+  async function saveJob() {
+    const rowIndex = document.getElementById('editRowIndex').value;
+    const payload = {
+      date: document.getElementById('f_date').value,
+      customer: document.getElementById('f_customer').value,
+      job_name: document.getElementById('f_job_name').value,
+      details: document.getElementById('f_details').value,
+      price: document.getElementById('f_price').value,
+      billed: document.getElementById('f_billed').checked,
+      paid: document.getElementById('f_paid').checked,
+      notes: document.getElementById('f_notes').value,
+    };
+
+    // ไม่บังคับกรอกครบ สามารถกลับมาแก้ไขทีหลังได้
+
+    closeModal('formModal');
+    showLoading(true);
+
+    try {
+      if (rowIndex) {
+        payload.action = 'update';
+        payload.rowIndex = parseInt(rowIndex);
+        await apiPost(payload);
+        const idx = allJobs.findIndex(j => j.rowIndex === parseInt(rowIndex));
+        if (idx !== -1) allJobs[idx] = { ...allJobs[idx], ...payload };
+        showToast('แก้ไขเรียบร้อยค่ะ ✅');
+      } else {
+        payload.action = 'add';
+        await apiPost(payload);
+        await loadJobs();
+        showToast('เพิ่มงานเรียบร้อยค่ะ ✅');
+      }
+    } catch(e) {
+      showToast('บันทึกไม่สำเร็จค่ะ');
+    }
+
+    showLoading(false);
+    renderAll();
+  }
+
+  // ---- Detail ----
+  function openDetail(rowIndex) {
+    const job = allJobs.find(j => j.rowIndex === rowIndex);
+    if (!job) return;
+
+    document.getElementById('detailContent').innerHTML = `
+      <div class="detail-row"><div class="detail-label">วันที่</div><div class="detail-value">${formatDate(job.date)}</div></div>
+      <div class="detail-row"><div class="detail-label">ลูกค้า</div><div class="detail-value">${esc(job.customer) || '-'}</div></div>
+      <div class="detail-row"><div class="detail-label">ชื่องาน</div><div class="detail-value">${esc(job.job_name) || '-'}</div></div>
+      <div class="detail-row"><div class="detail-label">รายละเอียดงาน</div><div class="detail-box">${esc(job.details) || '-'}</div></div>
+      <div class="detail-row"><div class="detail-label">ราคา</div><div class="detail-value" style="font-weight:700;color:#2b6cb0;">${formatPrice(job.price)}</div></div>
+      <div class="detail-row"><div class="detail-label">หมายเหตุ</div><div class="detail-box">${esc(job.notes) || '-'}</div></div>
+      <div class="detail-row">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <span class="badge ${billedClass(job.billed)}">${isTrue(job.billed) ? '✅ เปิดบิลแล้ว' : '❌ ยังไม่เปิดบิล'}</span>
+          <span class="badge ${paidClass(job.paid)}">${isTrue(job.paid) ? '✅ เก็บเงินแล้ว' : '⏳ ยังไม่เก็บเงิน'}</span>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('detailEditBtn').onclick = () => openEditModal(rowIndex);
+    document.getElementById('detailDeleteBtn').onclick = () => confirmDelete(rowIndex);
+    openModal('detailModal');
+  }
+
+  async function confirmDelete(rowIndex) {
+    const job = allJobs.find(j => j.rowIndex === rowIndex);
+    if (!confirm(`ลบงาน "${job?.job_name}" ใช่ไหมคะ?`)) return;
+    closeModal('detailModal');
+    showLoading(true);
+    try {
+      await apiPost({ action: 'delete', rowIndex });
+      allJobs = allJobs.filter(j => j.rowIndex !== rowIndex);
+      renderAll();
+      showToast('ลบเรียบร้อยค่ะ 🗑');
+    } catch(e) {
+      showToast('ลบไม่สำเร็จค่ะ');
+    }
+    showLoading(false);
+  }
+
+  // ---- Helpers ----
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+  });
+
+  function clearFilter() {
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterText').value = '';
+    renderAll();
+  }
+
+  function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+
+</body>
+</html>
